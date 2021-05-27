@@ -2,6 +2,7 @@ package com.test.poi.util;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Clase util para leer un excel y transformarlo a un hashmap.
@@ -67,6 +69,77 @@ public class ExcelUtil {
 		}
 		return workbook;
 	}
+	
+	
+	/**
+	 * Obtenga el objeto de libro correspondiente según el sufijo del archivo
+	 * 
+	 * @param filePath
+	 * @param fileType
+	 * @return
+	 */
+	public static Workbook getWorkbook(InputStream excelFile, String fileType) {
+		Workbook workbook = null;
+		try {
+			if (fileType.equalsIgnoreCase(XLS)) {
+				workbook = new HSSFWorkbook(excelFile);
+			} else if (fileType.equalsIgnoreCase(XLSX)) {
+				workbook = new XSSFWorkbook(excelFile);
+			}
+			
+		} catch (Exception e) {
+			logger.error("No se pudo obtener el archivo", e);
+		} finally {
+			try {
+				if (null != excelFile) {
+					excelFile.close();
+				}
+			} catch (Exception e) {
+				logger.error("Error al cerrar el flujo de datos! Mensaje de error:", e);
+				return null;
+			}
+		}
+		return workbook;
+	}
+	
+	
+	
+	/**
+	 * Leer archivos de Excel en lotes y devolver objetos de datos
+	 * 
+	 * @param filePath
+	 * @return
+	 */
+	public static List<Map<String, String>> readExcelMultipart(MultipartFile file) {
+		Workbook  workbook = null;
+		List<Map<String, String>> resultList = new ArrayList<>();
+		String filePath = file.getOriginalFilename();
+		
+		try {
+			String fileType = filePath.substring(filePath.lastIndexOf("."));
+			 workbook = getWorkbook(file.getInputStream(), fileType);
+			if (workbook == null) {
+				logger.info("No se pudo obtener el objeto del libro de trabajo");
+				return null;
+			}
+			resultList = analysisExcel(workbook);
+			return resultList;
+		} catch (Exception e) {
+			logger.error("Error al leer el archivo de Excel" + filePath + "mensaje de error", e);
+			return null;
+		} finally {
+			try {
+				if (null != workbook) {
+					//workbook.close();
+				}
+			} catch (Exception e) {
+				logger.error("Error al cerrar el flujo de datos! Mensaje de error:", e);
+				return null;
+			}
+
+		}
+	}
+	
 
 	public static List<Object> readFolder(String filePath) {
 		int fileNum = 0;
